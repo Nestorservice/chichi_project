@@ -192,6 +192,12 @@ export default function App() {
             const { orderId, updatedOrder } = data;
             const event = new CustomEvent('admin-order-update', { detail: { orderId, updatedOrder } });
             window.dispatchEvent(event);
+          } else if (data.type === 'admin_new_order') {
+            const { orderId, orderRows } = data;
+            playChime();
+            const event = new CustomEvent('admin-new-order', { detail: { orderId, orderRows } });
+            window.dispatchEvent(event);
+            addToast(`Nouvelle commande reçue : #${orderId} !`);
           } else if (data.type === 'new_review') {
             const { review } = data;
             const event = new CustomEvent('admin-new-review', { detail: { review } });

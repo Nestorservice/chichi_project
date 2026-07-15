@@ -92,6 +92,32 @@ async function passerCommande(req, res) {
 
     await conn.commit();
 
+    // Broadcast new order to admins via SSE
+    try {
+      const [newOrderRows] = await conn.query(`
+        SELECT o.id, o.status, o.total_fcfa, o.delivery_address, o.payment_method, o.created_at, o.latitude, o.longitude, o.delivery_choice_made, o.has_review,
+               u.full_name, u.phone,
+               oi.product_id, p.name, oi.quantity, oi.unit_price_fcfa
+          FROM orders o
+          LEFT JOIN users u ON u.id = o.user_id
+          LEFT JOIN order_items oi ON oi.order_id = o.id
+          LEFT JOIN products p ON p.id = oi.product_id
+         WHERE o.id = ?
+      `, [orderId]);
+
+      activeClients.forEach(c => {
+        if (c.isAdmin) {
+          c.res.write(`data: ${JSON.stringify({ 
+            type: 'admin_new_order', 
+            orderId: orderId, 
+            orderRows: newOrderRows 
+          })}\n\n`);
+        }
+      });
+    } catch (err) {
+      console.error("SSE new order broadcast failed:", err);
+    }
+
     res.status(201).json({
       commande: {
         id: orderId,

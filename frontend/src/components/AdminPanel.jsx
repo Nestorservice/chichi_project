@@ -134,8 +134,50 @@ export default function AdminPanel({ token, onBack }) {
         });
       });
     };
+    
+    const handleNewOrder = (e) => {
+      const { orderId, orderRows } = e.detail;
+      const map = {};
+      orderRows.forEach((r) => {
+        if (!map[r.id]) {
+          map[r.id] = {
+            id: r.id,
+            status: r.status,
+            total_fcfa: r.total_fcfa,
+            delivery_address: r.delivery_address,
+            payment_method: r.payment_method,
+            created_at: r.created_at,
+            full_name: r.full_name || 'Client Anonyme',
+            phone: r.phone || 'Non renseigné',
+            latitude: r.latitude,
+            longitude: r.longitude,
+            delivery_choice_made: r.delivery_choice_made,
+            items: []
+          };
+        }
+        if (r.name) {
+          map[r.id].items.push({
+            name: r.name,
+            quantity: r.quantity,
+            unit_price_fcfa: r.unit_price_fcfa
+          });
+        }
+      });
+      const newGroupedOrder = Object.values(map)[0];
+      if (newGroupedOrder) {
+        setCommandes((prev) => {
+          if (prev.some((o) => o.id === orderId)) return prev;
+          return [newGroupedOrder, ...prev];
+        });
+      }
+    };
+
     window.addEventListener('admin-order-update', handleUpdate);
-    return () => window.removeEventListener('admin-order-update', handleUpdate);
+    window.addEventListener('admin-new-order', handleNewOrder);
+    return () => {
+      window.removeEventListener('admin-order-update', handleUpdate);
+      window.removeEventListener('admin-new-order', handleNewOrder);
+    };
   }, []);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -423,11 +465,6 @@ export default function AdminPanel({ token, onBack }) {
         <header className="admin-main-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {isMobile && (
-                <button className="btn" style={{ padding: '6px 12px', fontSize: 13, borderRadius: 8 }} onClick={onBack}>
-                  ← Site
-                </button>
-              )}
               <h1 style={{ margin: 0 }}>
                 {activeTab === 'dashboard' && (isMobile ? 'Dashboard' : 'Statistiques & Performance')}
                 {activeTab === 'orders' && (isMobile ? 'Commandes' : 'Gestion des Commandes')}
@@ -444,9 +481,29 @@ export default function AdminPanel({ token, onBack }) {
               {activeTab === 'reviews' && 'Consultez les notes et suggestions d\'amélioration.'}
             </p>
           </div>
-          <div className="date-badge">
-            Date : {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </div>
+          {isMobile ? (
+            <button 
+              className="btn btn-primary" 
+              onClick={onBack}
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                padding: '8px 16px',
+                borderRadius: '999px',
+                background: 'var(--spice)',
+                borderColor: 'var(--spice)',
+                color: '#fff',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(224, 86, 36, 0.2)'
+              }}
+            >
+              Retour Site
+            </button>
+          ) : (
+            <div className="date-badge">
+              Date : {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          )}
         </header>
 
         {msg && <div className="msg-ok" style={{ marginBottom: 24, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>{msg}</div>}
