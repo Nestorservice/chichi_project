@@ -33,48 +33,41 @@ Le code source a été poussé sur votre dépôt GitHub :
 3. Une fois le service importé, accédez aux paramètres de configuration (**Settings**) de ce nouveau service backend :
    * Recherchez l'option **Root Directory** (Dossier racine).
    * Modifiez cette valeur pour saisir : `backend` (cela indique à Railway de n'exécuter et packager que le dossier du serveur).
-4. Accédez à l'onglet **Variables** de ce service backend et liez-le à la base de données MySQL :
-   * Cliquez sur **New Variable** > **Reference** pour lier les variables MySQL du service de base de données (ceci se fait automatiquement en référençant les variables MySQL ou en ajoutant `DATABASE_URL`).
+4. Accédez à l'onglet **Variables** de ce service backend et liez-le à la base de données MySQL et à Cloudinary :
+   * Liez les variables MySQL du service de base de données (ceci se fait automatiquement en référençant les variables MySQL ou en ajoutant `DATABASE_URL`).
    * Ajoutez la variable d'administration secrète :
-     * Clé : `JWT_SECRET` | Valeur : `CameroonRestoSecretToken2026!` (ou une autre chaîne complexe).
+     * Clé : `JWT_SECRET` | Valeur : `CameroonRestoSecretToken2026!`
      * Clé : `ADMIN_REGISTRATION_SECRET` | Valeur : `CameroonRestoAdmin2026!`
-   * Le backend se connectera automatiquement à la base de données grâce aux variables `MYSQLHOST`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE` et `MYSQLPORT` déjà injectées par Railway.
+   * **Ajoutez vos accès Cloudinary** (pour l'hébergement persistant des images) :
+     * Clé : `CLOUDINARY_URL` | Valeur : `cloudinary://VOTRE_API_KEY:VOTRE_API_SECRET@VOTRE_CLOUD_NAME` (disponible sur votre tableau de bord Cloudinary).
+     * *Alternativement, vous pouvez ajouter les variables séparées : `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` et `CLOUDINARY_API_SECRET`.*
+   * Le backend se connectera automatiquement à MySQL et Cloudinary grâce à ces variables.
 5. Accédez aux paramètres (**Settings**) du service backend, puis sous **Networking**, cliquez sur **Generate Domain** pour exposer publiquement votre API.
    * Notez cette URL générée (ex : `https://chichi-project-production.up.railway.app`).
 
 ---
 
-## Étape 4 : Initialisation des Tables de la Base de Données
+## Étape 4 : Importation de vos Données (fichier resto.sql de XAMPP) vers Railway
 
-Pour créer les tables nécessaires, exécutez le script SQL initial sur votre instance Railway :
-1. Sur Railway, cliquez sur votre service **MySQL**.
-2. Ouvrez l'onglet **Query** (ou utilisez un client SQL externe comme DBeaver/TablePlus en copiant les coordonnées de connexion de l'onglet **Connect**).
-3. Copiez et collez le contenu du fichier [schema.sql](file:///C:/Users/Nestor%20Corneille/Desktop/chichi%20code/backend/schema.sql) pour créer toutes les tables et contraintes.
-4. Pour créer les tables d'avis et suggestions (Reviews), copiez et exécutez le contenu DDL du fichier de migration [migrate_reviews.js](file:///C:/Users/Nestor%20Corneille/Desktop/chichi%20code/backend/src/migrate_reviews.js) :
-   ```sql
-   ALTER TABLE orders ADD COLUMN has_review BOOLEAN NOT NULL DEFAULT FALSE;
+Comme l'onglet Query n'est pas toujours disponible directement sur Railway selon votre plan, la méthode la plus simple et recommandée pour importer votre fichier `resto.sql` exporté de XAMPP est d'utiliser un client de base de données gratuit (comme **DBeaver**, **TablePlus**, ou **HeidiSQL**) ou la ligne de commande MySQL :
 
-   CREATE TABLE reviews (
-     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-     order_id BIGINT UNIQUE NOT NULL,
-     customer_name VARCHAR(120) NOT NULL,
-     app_rating INT NOT NULL CHECK (app_rating BETWEEN 1 AND 5),
-     suggestions TEXT,
-     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-   );
-
-   CREATE TABLE product_reviews (
-     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-     review_id BIGINT NOT NULL,
-     product_id BIGINT NOT NULL,
-     product_name VARCHAR(160) NOT NULL,
-     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
-     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-   );
+### Option A : Via la Ligne de Commande (Linter/Terminal)
+1. Cliquez sur votre service **MySQL** sur Railway.
+2. Ouvrez l'onglet **Connect**.
+3. Copiez la commande de connexion en ligne de commande (sous **Connection Command**). Elle ressemble à ceci :
+   `mysql -h HOST -u USER -pPASSWORD -P PORT DATABASE`
+4. Ouvrez votre terminal sur votre ordinateur dans le dossier contenant votre fichier `resto.sql` et exécutez la commande en y rajoutant `< resto.sql` à la fin :
+   ```bash
+   mysql -h HOST_RAILWAY -u USER_RAILWAY -pPASSWORD_RAILWAY -P PORT_RAILWAY DATABASE_RAILWAY < resto.sql
    ```
+
+### Option B : Via un Client de Base de Données (DBeaver, TablePlus, etc.)
+1. Sur Railway, ouvrez l'onglet **Connect** de votre service MySQL et copiez l'URL de connexion (**Connection URL**).
+2. Ouvrez votre client SQL (ex: TablePlus) et créez une nouvelle connexion en collant cette URL (le client va extraire automatiquement l'hôte, le port, l'utilisateur et le mot de passe).
+3. Une fois connecté à la base de données Railway :
+   * Faites un clic droit sur la base de données, choisissez **Import** > **SQL Dump...** (ou Restaurer).
+   * Sélectionnez votre fichier local `resto.sql` issu de XAMPP et lancez l'importation.
+4. Vos tables (utilisateurs, produits, commandes) et toutes vos données de test de XAMPP seront importées instantanément !
 
 ---
 
