@@ -3,6 +3,55 @@ import { discuter, mediaUrl } from '../api.js';
 
 const fmt = (n) => Number(n).toLocaleString('fr-FR') + ' FCFA';
 
+function formatTexte(texte) {
+  if (!texte) return '';
+  const lines = texte.split('\n');
+  const formattedElements = [];
+  let inList = false;
+  let listItems = [];
+  
+  const parseInline = (str) => {
+    const parts = str.split(/\*\*([\s\S]*?)\*\*/g);
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return <strong key={index}>{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  lines.forEach((line, lineIdx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (inList) {
+        formattedElements.push(<ul key={`list-${lineIdx}`} style={{ margin: '4px 0', paddingLeft: '16px', listStyleType: 'disc' }}>{listItems}</ul>);
+        listItems = [];
+        inList = false;
+      }
+      return;
+    }
+    
+    if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+      inList = true;
+      const content = trimmed.substring(2);
+      listItems.push(<li key={`li-${lineIdx}`} style={{ marginBottom: '2px' }}>{parseInline(content)}</li>);
+    } else {
+      if (inList) {
+        formattedElements.push(<ul key={`list-${lineIdx}`} style={{ margin: '4px 0', paddingLeft: '16px', listStyleType: 'disc' }}>{listItems}</ul>);
+        listItems = [];
+        inList = false;
+      }
+      formattedElements.push(<p key={`p-${lineIdx}`} style={{ margin: '4px 0', lineHeight: '1.4' }}>{parseInline(line)}</p>);
+    }
+  });
+
+  if (inList && listItems.length > 0) {
+    formattedElements.push(<ul key="list-final" style={{ margin: '4px 0', paddingLeft: '16px', listStyleType: 'disc' }}>{listItems}</ul>);
+  }
+
+  return formattedElements;
+}
+
 const SUGGESTIONS = [
   'Je suis diabétique, un plat camerounais',
   'Quelque chose pour sportif sans arachide',
@@ -59,7 +108,7 @@ export default function ChatBubble({ onAdd, onAddAll, onCheckout }) {
           <div className="chat-body">
             {messages.map((m, i) => (
               <div key={i} className={'chat-msg ' + m.de}>
-                <div className="bubble">{m.texte}</div>
+                <div className="bubble">{formatTexte(m.texte)}</div>
                 {m.plats && m.plats.length > 0 && (
                   <div className="chat-plats">
                     <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.7, marginBottom: 2 }}>Sélection recommandée :</div>
