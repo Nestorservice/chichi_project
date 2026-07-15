@@ -92,7 +92,7 @@ async function discuter(req, res) {
   try {
     // 1. Fetch all available products with nutrition info from the database
     const [products] = await db.query(`
-      SELECT p.id, p.name, p.description, p.price_fcfa, p.cuisine, p.is_available, p.nutritionist_validated,
+      SELECT p.id, p.name, p.description, p.price_fcfa, p.cuisine, p.image_url, p.is_available, p.nutritionist_validated,
              n.portion_g, n.calories_kcal, n.carbs_g, n.sugars_g, n.protein_g, n.fat_g, n.fiber_g, n.sodium_mg, n.glycemic_index,
              GROUP_CONCAT(DISTINCT t.tag) AS tags
         FROM products p

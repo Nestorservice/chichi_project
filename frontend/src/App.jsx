@@ -327,6 +327,21 @@ export default function App() {
       if (ex) return c.map((it) => (it.plat.id === plat.id ? { ...it, qty: it.qty + 1 } : it));
       return [...c, { plat, qty: 1 }];
     });
+
+  const ajouterPlusieurs = (platsList) => {
+    setCart((c) => {
+      let nextCart = [...c];
+      platsList.forEach((plat) => {
+        const ex = nextCart.find((it) => it.plat.id === plat.id);
+        if (ex) {
+          nextCart = nextCart.map((it) => (it.plat.id === plat.id ? { ...it, qty: it.qty + 1 } : it));
+        } else {
+          nextCart.push({ plat, qty: 1 });
+        }
+      });
+      return nextCart;
+    });
+  };
   const changerQty = (id, d) =>
     setCart((c) =>
       c.map((it) => (it.plat.id === id ? { ...it, qty: Math.max(1, it.qty + d) } : it)));
@@ -609,7 +624,17 @@ export default function App() {
         />
       )}
 
-      <ChatBubble onAdd={ajouter} />
+      <ChatBubble 
+        onAdd={ajouter} 
+        onAddAll={(platsList) => {
+          ajouterPlusieurs(platsList);
+          addToast(`${platsList.length} plat(s) ajouté(s) au panier !`);
+        }}
+        onCheckout={(platsList) => {
+          ajouterPlusieurs(platsList);
+          setShowCart(true);
+        }}
+      />
 
       {activeLocationPromptOrder && (
         <LocationPromptModal 

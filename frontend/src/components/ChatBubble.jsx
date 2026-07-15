@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { discuter } from '../api.js';
+import { discuter, mediaUrl } from '../api.js';
 
 const fmt = (n) => Number(n).toLocaleString('fr-FR') + ' FCFA';
 
@@ -9,7 +9,7 @@ const SUGGESTIONS = [
   'Un plat végan à moins de 1500 FCFA',
 ];
 
-export default function ChatBubble({ onAdd }) {
+export default function ChatBubble({ onAdd, onAddAll, onCheckout }) {
   const [ouvert, setOuvert] = useState(false);
   const [messages, setMessages] = useState([
     { de: 'bot', texte: 'Bonjour ! Dites-moi votre besoin (diabétique, sportif, végan, allergies, budget…) et je vous propose des plats adaptés.' },
@@ -62,15 +62,41 @@ export default function ChatBubble({ onAdd }) {
                 <div className="bubble">{m.texte}</div>
                 {m.plats && m.plats.length > 0 && (
                   <div className="chat-plats">
+                    <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.7, marginBottom: 2 }}>Sélection recommandée :</div>
                     {m.plats.map((p) => (
                       <div className="chat-plat" key={p.id}>
-                        <div>
-                          <div className="cp-name">{p.name}</div>
-                          <div className="cp-price">{fmt(p.price_fcfa)}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                          {p.image_url && (
+                            <img 
+                              src={mediaUrl(p.image_url)} 
+                              alt={p.name} 
+                              style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} 
+                            />
+                          )}
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div className="cp-name">{p.name}</div>
+                            <div className="cp-price">{fmt(p.price_fcfa)}</div>
+                          </div>
                         </div>
                         <button className="cp-add" aria-label={'Ajouter ' + p.name} onClick={() => onAdd(p)}>+</button>
                       </div>
                     ))}
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ flex: 1, fontSize: 10, padding: '4px 6px', borderRadius: 6 }} 
+                        onClick={() => onAddAll && onAddAll(m.plats)}
+                      >
+                        Tout ajouter
+                      </button>
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ flex: 1, fontSize: 10, padding: '4px 6px', borderRadius: 6, background: 'var(--spice)', borderColor: 'var(--spice)', color: '#fff' }} 
+                        onClick={() => onCheckout && onCheckout(m.plats)}
+                      >
+                        Commander
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
