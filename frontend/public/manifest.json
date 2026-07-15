@@ -1,0 +1,17 @@
+{
+  "short_name": "Mboa Resto",
+  "name": "Mboa Resto - Restauration Camerounaise",
+  "icons": [
+    {
+      "src": "/images/logo.webp",
+      "type": "image/webp",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#faf6ef",
+  "theme_color": "#15604a",
+  "display": "standalone",
+  "orientation": "portrait"
+}
