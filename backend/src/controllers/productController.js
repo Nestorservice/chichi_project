@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db'); // Supposé exporter un pool MySQL (ex: mysql2/promise)
 const { deriverTagsSante, tagsRequis } = require('../healthEngine');
+const { uploadToCloudinary } = require('../middleware/upload');
+
 
 const UPLOADS = path.join(__dirname, '..', '..', 'uploads');
 
@@ -192,11 +194,34 @@ async function creerProduit(req, res) {
   const nutrition = parseJSON(b.nutrition, {});
   const allergenes = parseJSON(b.allergenes, []);
   const files = req.files || {};
-  const principale = files.image && files.image[0] ? '/uploads/' + files.image[0].filename : null;
-  const galerie = (files.gallery || []).map((f) => '/uploads/' + f.filename);
 
   if (!b.name || b.price_fcfa == null || b.price_fcfa === '' || !b.cuisine) {
     return res.status(400).json({ erreur: 'name, price_fcfa et cuisine sont requis' });
+  }
+
+  // Upload principal image to Cloudinary
+  let principale = null;
+  if (files.image && files.image[0]) {
+    try {
+      principale = await uploadToCloudinary(files.image[0]);
+    } catch (err) {
+      console.error("Cloudinary upload failed:", err);
+      return res.status(500).json({ erreur: "Échec de l'hébergement de l'image principale" });
+    }
+  }
+
+  // Upload gallery images to Cloudinary
+  const galerie = [];
+  if (files.gallery && files.gallery.length) {
+    try {
+      for (const file of files.gallery) {
+        const url = await uploadToCloudinary(file);
+        if (url) galerie.push(url);
+      }
+    } catch (err) {
+      console.error("Cloudinary gallery upload failed:", err);
+      return res.status(500).json({ erreur: "Échec de l'hébergement des images de la galerie" });
+    }
   }
 
   const connection = await db.getConnection(); // Obtention d'une connexion dédiée du pool MySQL
@@ -261,7 +286,11 @@ async function modifierProduit(req, res) {
     if (b.is_gluten_free != null) push('is_gluten_free', bool(b.is_gluten_free));
     if (b.nutritionist_validated != null) push('nutritionist_validated', bool(b.nutritionist_validated));
     if (b.is_available != null) push('is_available', bool(b.is_available));
-    if (files.image && files.image[0]) push('image_url', '/uploads/' + files.image[0].filename);
+    
+    if (files.image && files.image[0]) {
+      const url = await uploadToCloudinary(files.image[0]);
+      if (url) push('image_url', url);
+    }
     
     if (set.length) {
       params.push(id);
@@ -270,7 +299,6 @@ async function modifierProduit(req, res) {
 
     if (b.nutrition) {
       const n = parseJSON(b.nutrition, {});
-      // Traduction du ON CONFLICT de Postgres en ON DUPLICATE KEY UPDATE de MySQL
       await connection.query(`
         INSERT INTO product_nutrition
           (product_id, portion_g, calories_kcal, carbs_g, sugars_g, protein_g, fat_g, fiber_g, sodium_mg, glycemic_index)
@@ -289,7 +317,13 @@ async function modifierProduit(req, res) {
          num(n.protein_g), num(n.fat_g), num(n.fiber_g), num(n.sodium_mg), num(n.glycemic_index)]);
     }
 
-    const galerie = (files.gallery || []).map((f) => '/uploads/' + f.filename);
+    const galerie = [];
+    if (files.gallery && files.gallery.length) {
+      for (const file of files.gallery) {
+        const url = await uploadToCloudinary(file);
+        if (url) galerie.push(url);
+      }
+    }
     if (galerie.length) {
       const [mx] = await connection.query(
         'SELECT COALESCE(MAX(position), -1) AS m FROM product_images WHERE product_id = ?', [id]);

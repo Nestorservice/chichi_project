@@ -1,19 +1,18 @@
 'use strict';
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
+const cloudinary = require('cloudinary').v2;
 
-const DOSSIER = path.join(__dirname, '..', '..', 'uploads');
-fs.mkdirSync(DOSSIER, { recursive: true });
+// Cloudinary Configuration
+if (!process.env.CLOUDINARY_URL) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+}
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, DOSSIER),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, crypto.randomBytes(8).toString('hex') + ext);
-  },
-});
+// Memory storage keeps files as buffers in memory
+const storage = multer.memoryStorage();
 
 function fileFilter(req, file, cb) {
   const ok = /image\/(jpeg|jpg|png|webp|gif)/.test(file.mimetype);
@@ -27,4 +26,19 @@ const champsImages = upload.fields([
   { name: 'gallery', maxCount: 10 },
 ]);
 
-module.exports = { upload, champsImages, DOSSIER };
+// Helper function to upload buffers to Cloudinary
+function uploadToCloudinary(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.buffer) return resolve(null);
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: 'mboa_resto' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+    uploadStream.end(file.buffer);
+  });
+}
+
+module.exports = { upload, champsImages, uploadToCloudinary };
